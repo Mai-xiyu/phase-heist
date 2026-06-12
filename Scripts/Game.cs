@@ -776,7 +776,15 @@ public partial class Game : Node3D
                     return ("st.negotiate.cd", 0);
                 }
 
-                _fx?.PlaySirenPulse(player.GlobalPosition);
+                if (player.Team == PlayerTeam.Police)
+                {
+                    _fx?.PlayMegaphone(player.GlobalPosition);
+                }
+                else
+                {
+                    _fx?.PlayPhone(player.GlobalPosition);
+                }
+
                 return (player.Team == PlayerTeam.Police ? "st.negotiate.police" : "st.negotiate.robber", 0);
 
             case BankActionType.VaultLoot:
@@ -789,7 +797,7 @@ public partial class Game : Node3D
             case BankActionType.ReleaseHostage:
                 if (mode.ReleaseHostage())
                 {
-                    MarkHostage(released: true);
+                    MarkHostage(released: true, player.GlobalPosition);
                     _fx?.PlayHostageEvent(player.GlobalPosition, released: true);
                     return ("st.host.release", 0);
                 }
@@ -799,7 +807,7 @@ public partial class Game : Node3D
             case BankActionType.KillHostage:
                 if (mode.KillHostage())
                 {
-                    MarkHostage(released: false);
+                    MarkHostage(released: false, player.GlobalPosition);
                     _fx?.PlayHostageEvent(player.GlobalPosition, released: false);
                     return ("st.host.kill", 0);
                 }
@@ -1010,23 +1018,39 @@ public partial class Game : Node3D
         }
     }
 
-    private void MarkHostage(bool released)
+    private void MarkHostage(bool released, Vector3 nearPosition)
     {
+        // 优先标记离操作者最近的可用人质（对 NPC 直接交互时视觉一致）
+        BankNpc? best = null;
+        float bestDistance = float.MaxValue;
+
         foreach (Node node in GetTree().GetNodesInGroup("hostages"))
         {
-            if (node is BankNpc hostage && hostage.IsAvailableHostage)
+            if (node is not BankNpc hostage || !hostage.IsAvailableHostage)
             {
-                if (released)
-                {
-                    hostage.MarkReleased();
-                }
-                else
-                {
-                    hostage.MarkKilled();
-                }
-
-                return;
+                continue;
             }
+
+            float distance = nearPosition.DistanceTo(hostage.GlobalPosition);
+            if (distance < bestDistance)
+            {
+                best = hostage;
+                bestDistance = distance;
+            }
+        }
+
+        if (best == null)
+        {
+            return;
+        }
+
+        if (released)
+        {
+            best.MarkReleased();
+        }
+        else
+        {
+            best.MarkKilled();
         }
     }
 

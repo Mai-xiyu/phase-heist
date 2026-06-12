@@ -4,8 +4,9 @@ namespace PhaseHeist;
 
 /// <summary>
 /// 人群/人质 NPC：人形模型 + 轻量行为树式状态机（确定性 tick，无需网络同步）。
+/// 人质本身可交互：劫匪锁门后走近按 E 直接释放（不再用地面圆圈）。
 /// </summary>
-public partial class BankNpc : Node3D
+public partial class BankNpc : Node3D, IInteractable
 {
     private enum BrainState
     {
@@ -19,6 +20,8 @@ public partial class BankNpc : Node3D
     [Export] public BankNpcKind Kind { get; set; } = BankNpcKind.Civilian;
     [Export] public int Seed { get; set; }
     [Export] public float WanderRadius { get; set; } = 2.0f;
+
+    public float InteractRadius => 1.9f;
 
     private HumanRig? _rig;
     private Label3D? _label;
@@ -89,6 +92,37 @@ public partial class BankNpc : Node3D
                 MoveTowardTarget((float)delta, _state == BrainState.Queue ? 1.2f : 1.6f);
                 break;
         }
+    }
+
+    // ---------- 人质交互（E 释放） ----------
+
+    public bool CanInteract(Node3D actor)
+    {
+        if (Kind != BankNpcKind.Hostage || !IsAvailableHostage || actor is not PlayerController player)
+        {
+            return false;
+        }
+
+        HeistGameMode? mode = HeistService.Instance?.GameMode;
+        return mode != null && BankActionRules.Check(BankActionType.ReleaseHostage, player, mode, out _);
+    }
+
+    public void Interact(Node3D actor)
+    {
+        if (actor is not PlayerController player)
+        {
+            return;
+        }
+
+        if (GetTree().CurrentScene is Game game)
+        {
+            game.RequestBankAction(player.PeerId, BankActionType.ReleaseHostage);
+        }
+    }
+
+    public string GetInteractPrompt()
+    {
+        return Loc.T("obj.release");
     }
 
     public void MarkReleased()

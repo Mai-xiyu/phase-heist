@@ -39,6 +39,22 @@ public partial class FeedbackFx : Node3D
         Burst(worldPosition + new Vector3(0, 1.6f, 0), new Color(0.15f, 0.28f, 1.0f), 8, 1.0f);
     }
 
+    /// <summary>警用喇叭：啸叫起音 + 电音扫频。</summary>
+    public void PlayMegaphone(Vector3 worldPosition)
+    {
+        PlayTone(worldPosition, 1180.0f, 0.10f, -6.0f, 880.0f);
+        PlayTone(worldPosition, 560.0f, 0.30f, -7.0f, 340.0f);
+        Burst(worldPosition + new Vector3(0, 1.5f, 0), new Color(0.20f, 0.40f, 1.0f), 6, 0.7f);
+    }
+
+    /// <summary>座机电话拨号音。</summary>
+    public void PlayPhone(Vector3 worldPosition)
+    {
+        PlayTone(worldPosition, 440.0f, 0.16f, -8.0f);
+        PlayTone(worldPosition, 350.0f, 0.16f, -10.0f);
+        Burst(worldPosition + new Vector3(0, 1.2f, 0), new Color(0.15f, 0.70f, 0.70f), 5, 0.5f);
+    }
+
     public void PlaySettlement(bool robberWin)
     {
         Vector3 pos = new(0, 2.0f, 3.0f);

@@ -174,6 +174,11 @@ public partial class CityMapBuilder : Node3D
         };
 
         CarVisualBuilder.AddCarVisual(car, color, police);
+        if (police)
+        {
+            car.AddChild(new FlashingLight());
+        }
+
         car.AddChild(new CollisionShape3D
         {
             Position = new Vector3(0, 0.85f, 0),
@@ -253,15 +258,43 @@ public partial class CityMapBuilder : Node3D
         // 西墙 x=-18：完整
         AddWall("WestWall", new Vector3(-18, 0, -7), new Vector3(WallT, WallH, 26));
 
-        // 前廊立柱（4 根，柱距 8m）
+        // 前廊立柱（4 根，柱距 8m，带柱头柱础）
         for (int i = 0; i < 4; i++)
         {
             float x = -12 + i * 8;
-            AddStaticCylinder($"Column_{i}", new Vector3(x, 0, 7.6f), 0.45f, WallH + 0.6f, new Color(0.55f, 0.53f, 0.50f));
+            AddStaticCylinder($"Column_{i}", new Vector3(x, 0, 7.6f), 0.42f, WallH + 0.6f, new Color(0.62f, 0.59f, 0.54f));
+            AddVisual($"ColumnCap_{i}", new Vector3(x, WallH + 0.35f, 7.6f), new Vector3(1.05f, 0.38f, 1.05f), new Color(0.55f, 0.52f, 0.48f));
+            AddVisual($"ColumnBase_{i}", new Vector3(x, 0.18f, 7.6f), new Vector3(1.15f, 0.36f, 1.15f), new Color(0.42f, 0.40f, 0.38f));
         }
 
-        // 檐口横梁
-        AddVisual("Cornice", new Vector3(0, WallH + 0.45f, 7.6f), new Vector3(36.5f, 0.5f, 1.2f), new Color(0.40f, 0.39f, 0.42f));
+        // 檐口横梁 + 三角楣
+        AddVisual("Cornice", new Vector3(0, WallH + 0.45f, 7.6f), new Vector3(36.5f, 0.5f, 1.2f), new Color(0.46f, 0.44f, 0.42f));
+        var pediment = new MeshInstance3D
+        {
+            Name = "Pediment",
+            Position = new Vector3(0, WallH + 1.35f, 7.4f),
+            Mesh = new PrismMesh { Size = new Vector3(12.5f, 1.5f, 1.0f) },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.58f, 0.55f, 0.50f), Roughness = 0.8f },
+        };
+        AddChild(pediment);
+
+        // 外墙基座深色带 + 双层窗框线
+        AddVisual("BaseBandFront", new Vector3(0, 0.45f, 6.18f), new Vector3(36.2f, 0.9f, 0.06f), new Color(0.30f, 0.29f, 0.28f));
+        AddVisual("SillLineW", new Vector3(-10, 1.45f, 6.14f), new Vector3(15.8f, 0.14f, 0.06f), new Color(0.40f, 0.38f, 0.35f));
+        AddVisual("SillLineE", new Vector3(10, 1.45f, 6.14f), new Vector3(15.8f, 0.14f, 0.06f), new Color(0.40f, 0.38f, 0.35f));
+        AddVisual("HeadLineW", new Vector3(-10, 3.85f, 6.14f), new Vector3(15.8f, 0.14f, 0.06f), new Color(0.40f, 0.38f, 0.35f));
+        AddVisual("HeadLineE", new Vector3(10, 3.85f, 6.14f), new Vector3(15.8f, 0.14f, 0.06f), new Color(0.40f, 0.38f, 0.35f));
+
+        // 玻璃竖梃（窗框分格）
+        for (float x = -16; x <= 16.01f; x += 2)
+        {
+            if (Mathf.Abs(x) < 2.6f)
+            {
+                continue; // 门洞跳过
+            }
+
+            AddVisual($"Mullion_{x}", new Vector3(x, 2.65f, 6.12f), new Vector3(0.10f, 2.3f, 0.07f), new Color(0.20f, 0.21f, 0.24f));
+        }
 
         // 玻璃幕墙（视觉，位于门两侧）
         AddGlass("GlassW", new Vector3(-10, 2.6f, 6.06f), new Vector3(13.5f, 2.6f, 0.08f));
@@ -305,6 +338,36 @@ public partial class CityMapBuilder : Node3D
         {
             AddStaticCylinder($"Stanchion_{i}", new Vector3(-7.5f + i * 3, 0, 0.5f), 0.06f, 1.0f, new Color(0.65f, 0.55f, 0.20f));
         }
+
+        // 大厅天花横梁（保留天窗采光的同时增加体量感）
+        for (int i = 0; i < 3; i++)
+        {
+            float z = -4 + i * 4;
+            AddVisual($"CeilingBeam_{i}", new Vector3(0, 4.65f, z), new Vector3(35.0f, 0.35f, 0.55f), new Color(0.34f, 0.27f, 0.20f));
+        }
+
+        // 入口红毯：大门直通柜台
+        AddVisual("RedCarpet", new Vector3(0, 0.045f, 1.4f), new Vector3(3.2f, 0.02f, 8.6f), new Color(0.46f, 0.10f, 0.10f));
+        AddVisual("CarpetTrimL", new Vector3(-1.66f, 0.05f, 1.4f), new Vector3(0.12f, 0.02f, 8.6f), new Color(0.78f, 0.62f, 0.22f));
+        AddVisual("CarpetTrimR", new Vector3(1.66f, 0.05f, 1.4f), new Vector3(0.12f, 0.02f, 8.6f), new Color(0.78f, 0.62f, 0.22f));
+
+        // 柜台后品牌墙：金色圆徽 + 挂钟
+        AddVisual("BrandWall", new Vector3(0, 2.2f, -5.78f), new Vector3(12, 3.2f, 0.12f), new Color(0.24f, 0.20f, 0.17f));
+        AddVisualCylinder("BrandDisc", new Vector3(0, 2.6f, -5.66f), 0.85f, 0.06f, new Color(0.85f, 0.68f, 0.25f), true);
+        var brandDisc = GetNodeOrNull<MeshInstance3D>("BrandDisc");
+        if (brandDisc != null)
+        {
+            brandDisc.RotationDegrees = new Vector3(90, 0, 0);
+        }
+
+        AddVisualCylinder("ClockFace", new Vector3(8, 3.4f, -5.66f), 0.45f, 0.05f, new Color(0.92f, 0.92f, 0.90f));
+        var clock = GetNodeOrNull<MeshInstance3D>("ClockFace");
+        if (clock != null)
+        {
+            clock.RotationDegrees = new Vector3(90, 0, 0);
+        }
+        AddVisual("ClockHandH", new Vector3(8, 3.46f, -5.60f), new Vector3(0.05f, 0.22f, 0.02f), new Color(0.1f, 0.1f, 0.1f));
+        AddVisual("ClockHandM", new Vector3(8.09f, 3.36f, -5.60f), new Vector3(0.20f, 0.04f, 0.02f), new Color(0.1f, 0.1f, 0.1f));
     }
 
     private void BuildVault()
@@ -467,29 +530,29 @@ public partial class CityMapBuilder : Node3D
 
     private void BuildObjectives()
     {
-        AddObjective("EnterBank", BankActionType.EnterBank, "obj.enterbank", new Vector3(0, 0, 8.2f), 2.2f, new Color(0.22f, 0.65f, 0.30f));
-        AddObjective("DisguiseRack", BankActionType.ChangeDisguise, "obj.disguise", new Vector3(-12, 0, 16), 1.8f, new Color(0.45f, 0.38f, 0.28f));
-        AddObjective("PoliceShoutLine", BankActionType.PoliceShoutDown, "obj.shout", new Vector3(5, 0, 21), 2.0f, new Color(0.16f, 0.25f, 0.75f));
+        // 交互点 = 实体道具（地面大圆盘已废除）；人质释放改为直接对 NPC 按 E
+        AddObjective("EnterBank", BankActionType.EnterBank, "obj.enterbank", new Vector3(0, 0, 8.2f), 2.2f, new Color(0.22f, 0.65f, 0.30f), ObjectivePropKind.None);
+        AddObjective("DisguiseRack", BankActionType.ChangeDisguise, "obj.disguise", new Vector3(-12, 0, 16), 1.8f, new Color(0.45f, 0.38f, 0.28f), ObjectivePropKind.Rack);
+        AddObjective("PoliceShoutLine", BankActionType.PoliceShoutDown, "obj.shout", new Vector3(5, 0, 21), 2.0f, new Color(0.16f, 0.25f, 0.75f), ObjectivePropKind.Megaphone);
 
-        AddObjective("RobberPhone", BankActionType.Negotiate, "obj.phone", new Vector3(3.5f, 0, 1.5f), 1.6f, new Color(0.10f, 0.45f, 0.50f));
-        AddObjective("PoliceMegaphone", BankActionType.Negotiate, "obj.megaphone", new Vector3(-6, 0, 25), 1.6f, new Color(0.12f, 0.22f, 0.75f));
+        AddObjective("RobberPhone", BankActionType.Negotiate, "obj.phone", new Vector3(3.5f, 0, -1.9f), 1.7f, new Color(0.10f, 0.45f, 0.50f), ObjectivePropKind.Phone);
+        AddObjective("PoliceMegaphone", BankActionType.Negotiate, "obj.megaphone", new Vector3(-6, 0, 25), 1.7f, new Color(0.12f, 0.22f, 0.75f), ObjectivePropKind.Megaphone);
 
-        AddObjective("VaultLoot", BankActionType.VaultLoot, "obj.vault", new Vector3(13.3f, 0, -13.6f), 2.0f, new Color(0.90f, 0.70f, 0.18f));
+        AddObjective("VaultLoot", BankActionType.VaultLoot, "obj.vault", new Vector3(13.3f, 0, -13.6f), 2.0f, new Color(0.90f, 0.70f, 0.18f), ObjectivePropKind.LootBag);
 
-        AddObjective("ReleaseHostage", BankActionType.ReleaseHostage, "obj.release", new Vector3(-11, 0, 1.0f), 1.5f, new Color(0.18f, 0.65f, 0.32f));
-        AddObjective("KillHostage", BankActionType.KillHostage, "obj.kill", new Vector3(-11, 0, 3.5f), 1.4f, new Color(0.70f, 0.10f, 0.08f));
-        AddObjective("FakeHostage", BankActionType.FakeHostage, "obj.fake", new Vector3(-15.8f, 0, 0.0f), 1.4f, new Color(0.75f, 0.55f, 0.18f));
-        AddObjective("RecordMessage", BankActionType.RecordMessage, "obj.record", new Vector3(-15.8f, 0, -3.0f), 1.4f, new Color(0.55f, 0.22f, 0.55f));
+        AddObjective("KillHostage", BankActionType.KillHostage, "obj.kill", new Vector3(-11, 0, 3.5f), 1.5f, new Color(0.70f, 0.10f, 0.08f), ObjectivePropKind.KnifeTable);
+        AddObjective("FakeHostage", BankActionType.FakeHostage, "obj.fake", new Vector3(-15.8f, 0, 0.0f), 1.5f, new Color(0.75f, 0.55f, 0.18f), ObjectivePropKind.Chair);
+        AddObjective("RecordMessage", BankActionType.RecordMessage, "obj.record", new Vector3(-15.8f, 0, -3.0f), 1.5f, new Color(0.55f, 0.22f, 0.55f), ObjectivePropKind.Recorder);
 
-        AddObjective("PoliceFrontEntry", BankActionType.PoliceEntryFront, "obj.entryfront", new Vector3(0, 0, 10.8f), 1.5f, new Color(0.10f, 0.28f, 0.78f));
-        AddObjective("PoliceSideEntry", BankActionType.PoliceEntrySide, "obj.entryside", MapLocations.SideDoorOutside with { Y = 0 }, 1.5f, new Color(0.10f, 0.28f, 0.78f));
-        AddObjective("PoliceBackEntry", BankActionType.PoliceEntryBack, "obj.entryback", MapLocations.BackDoorOutside with { Y = 0 }, 1.5f, new Color(0.10f, 0.28f, 0.78f));
+        AddObjective("PoliceFrontEntry", BankActionType.PoliceEntryFront, "obj.entryfront", new Vector3(2.8f, 0, 7.2f), 1.6f, new Color(0.10f, 0.28f, 0.78f), ObjectivePropKind.BreachCharge);
+        AddObjective("PoliceSideEntry", BankActionType.PoliceEntrySide, "obj.entryside", MapLocations.SideDoorOutside with { Y = 0 }, 1.6f, new Color(0.10f, 0.28f, 0.78f), ObjectivePropKind.BreachCharge);
+        AddObjective("PoliceBackEntry", BankActionType.PoliceEntryBack, "obj.entryback", MapLocations.BackDoorOutside with { Y = 0 }, 1.6f, new Color(0.10f, 0.28f, 0.78f), ObjectivePropKind.BreachCharge);
 
-        AddObjective("BlockSideExit", BankActionType.BlockSideExit, "obj.blockside", MapLocations.BlockSidePos with { Y = 0 }, 1.6f, new Color(0.10f, 0.18f, 0.55f));
-        AddObjective("BlockSewerExit", BankActionType.BlockSewerExit, "obj.blocksewer", MapLocations.BlockSewerPos with { Y = 0 }, 1.6f, new Color(0.10f, 0.18f, 0.55f));
+        AddObjective("BlockSideExit", BankActionType.BlockSideExit, "obj.blockside", MapLocations.BlockSidePos with { Y = 0 }, 1.7f, new Color(0.10f, 0.18f, 0.55f), ObjectivePropKind.Barricade);
+        AddObjective("BlockSewerExit", BankActionType.BlockSewerExit, "obj.blocksewer", MapLocations.BlockSewerPos with { Y = 0 }, 1.7f, new Color(0.10f, 0.18f, 0.55f), ObjectivePropKind.Barricade);
 
-        AddObjective("EscapeSideDoor", BankActionType.EscapeSideDoor, "obj.escapeside", new Vector3(22, 0, 8), 2.2f, new Color(0.88f, 0.52f, 0.12f));
-        AddObjective("EscapeSewer", BankActionType.EscapeSewer, "obj.escapesewer", new Vector3(-8, 0, -24.5f), 2.2f, new Color(0.18f, 0.56f, 0.48f));
+        AddObjective("EscapeSideDoor", BankActionType.EscapeSideDoor, "obj.escapeside", new Vector3(22, 0, 8), 2.2f, new Color(0.88f, 0.52f, 0.12f), ObjectivePropKind.None);
+        AddObjective("EscapeSewer", BankActionType.EscapeSewer, "obj.escapesewer", new Vector3(-8, 0, -24.5f), 2.2f, new Color(0.18f, 0.56f, 0.48f), ObjectivePropKind.Manhole);
     }
 
     private void BuildNpcs()
@@ -603,6 +666,11 @@ public partial class CityMapBuilder : Node3D
         };
 
         CarVisualBuilder.AddCarVisual(car, color, police);
+        if (police)
+        {
+            car.AddChild(new FlashingLight());
+        }
+
         car.AddChild(new CollisionShape3D
         {
             Position = new Vector3(0, 0.7f, 0),
@@ -647,33 +715,18 @@ public partial class CityMapBuilder : Node3D
         AddChild(lamp);
     }
 
-    private void AddObjective(string name, BankActionType action, string promptKey, Vector3 pos, float radius, Color color)
+    private void AddObjective(string name, BankActionType action, string promptKey, Vector3 pos, float radius, Color color, ObjectivePropKind prop)
     {
         var objective = new BankObjective
         {
             Name = name,
-            Position = pos with { Y = 0.35f },
+            Position = pos with { Y = 0.05f },
             ActionType = action,
             PromptKey = promptKey,
+            InteractRadius = radius,
+            BaseColor = color,
         };
 
-        objective.AddChild(new MeshInstance3D
-        {
-            Name = "Marker",
-            Mesh = new CylinderMesh
-            {
-                TopRadius = radius,
-                BottomRadius = radius,
-                Height = 0.08f,
-                Material = new StandardMaterial3D
-                {
-                    AlbedoColor = color,
-                    EmissionEnabled = true,
-                    Emission = color,
-                    EmissionEnergyMultiplier = 0.4f,
-                },
-            },
-        });
         objective.AddChild(new CollisionShape3D
         {
             Name = "CollisionShape3D",
@@ -682,10 +735,14 @@ public partial class CityMapBuilder : Node3D
         objective.AddChild(new Label3D
         {
             Name = "Label",
-            Position = new Vector3(0, 1.9f, 0),
+            Position = new Vector3(0, 1.95f, 0),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FontSize = 22,
+            FontSize = 18,
+            Modulate = new Color(1, 1, 1, 0.92f),
+            OutlineSize = 8,
         });
+
+        ObjectiveProps.Build(prop, objective);
         AddChild(objective);
     }
 

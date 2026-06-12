@@ -23,6 +23,8 @@ public partial class VoiceChatManager : Node
     private double _resampleAcc;
     private readonly Dictionary<int, AudioStreamGeneratorPlayback> _playbacks = new();
     private readonly Dictionary<int, AudioStreamPlayer3D> _players3d = new();
+    private readonly Dictionary<int, AudioStreamGeneratorPlayback> _radioPlaybacks = new();
+    private readonly Dictionary<int, AudioStreamPlayer> _radioPlayers = new();
     private readonly IVoiceCodec _codec = new Pcm16VoiceCodec(TargetRate, FrameSamples);
     private readonly VoiceEchoSuppressor _echoSuppressor = new();
 
@@ -42,7 +44,39 @@ public partial class VoiceChatManager : Node
             AppState.Instance.SettingsChanged += OnSettingsChanged;
         }
 
+        SetupRadioBus();
         ReconfigureMic();
+    }
+
+    /// <summary>
+    /// 警用无线电总线：带通 + 过载失真 + 压缩，模拟对讲机电音。
+    /// 警察之间的语音走此总线（全图 2D），劫匪听不到。
+    /// </summary>
+    private static void SetupRadioBus()
+    {
+        if (AudioServer.GetBusIndex("Radio") >= 0)
+        {
+            return;
+        }
+
+        int idx = AudioServer.BusCount;
+        AudioServer.AddBus(idx);
+        AudioServer.SetBusName(idx, "Radio");
+        AudioServer.SetBusSend(idx, "Master");
+
+        AudioServer.AddBusEffect(idx, new AudioEffectHighPassFilter { CutoffHz = 420 });
+        AudioServer.AddBusEffect(idx, new AudioEffectLowPassFilter { CutoffHz = 3100 });
+        AudioServer.AddBusEffect(idx, new AudioEffectDistortion
+        {
+            Mode = AudioEffectDistortion.ModeEnum.Overdrive,
+            Drive = 0.28f,
+            PostGain = -2.0f,
+        });
+        AudioServer.AddBusEffect(idx, new AudioEffectCompressor
+        {
+            Threshold = -18.0f,
+            Ratio = 5.0f,
+        });
     }
 
     public override void _ExitTree()
@@ -103,7 +137,11 @@ public partial class VoiceChatManager : Node
         }
     }
 
-    /// <summary>远端语音帧入口（Game RPC 调用）。</summary>
+    /// <summary>
+    /// 远端语音帧入口（Game RPC 调用）。
+    /// 路由规则：警察→警察 = 全图无线电（电音、劫匪听不到此通道）；
+    /// 其余组合 = 3D 近距离语音（警察当面喊话劫匪仍能听见）。
+    /// </summary>
     public void Receive(int peerId, byte[] data)
     {
         if (_game == null || peerId == _game.LocalPeerId())
@@ -119,7 +157,12 @@ public partial class VoiceChatManager : Node
 
         player.NotifySpeaking();
 
-        AudioStreamGeneratorPlayback? playback = EnsurePlayback(peerId, player);
+        bool radioChannel = player.Team == PlayerTeam.Police &&
+                            _game.LocalPlayer?.Team == PlayerTeam.Police;
+
+        AudioStreamGeneratorPlayback? playback = radioChannel
+            ? EnsureRadioPlayback(peerId)
+            : EnsurePlayback(peerId, player);
         if (playback == null)
         {
             return;
@@ -130,6 +173,37 @@ public partial class VoiceChatManager : Node
         {
             playback.PushBuffer(frames);
         }
+    }
+
+    private AudioStreamGeneratorPlayback? EnsureRadioPlayback(int peerId)
+    {
+        if (_radioPlayers.TryGetValue(peerId, out AudioStreamPlayer? existing) && IsInstanceValid(existing))
+        {
+            return _radioPlaybacks.TryGetValue(peerId, out var pb) ? pb : null;
+        }
+
+        var output = new AudioStreamPlayer
+        {
+            Name = $"RadioVoice_{peerId}",
+            Stream = new AudioStreamGenerator
+            {
+                MixRate = TargetRate,
+                BufferLength = 0.4f,
+            },
+            Bus = "Radio",
+            VolumeDb = VoiceVolumeDb() - 3.0f,
+        };
+        AddChild(output);
+        output.Play();
+
+        if (output.GetStreamPlayback() is AudioStreamGeneratorPlayback playback)
+        {
+            _radioPlayers[peerId] = output;
+            _radioPlaybacks[peerId] = playback;
+            return playback;
+        }
+
+        return null;
     }
 
     private AudioStreamGeneratorPlayback? EnsurePlayback(int peerId, PlayerController player)
@@ -174,6 +248,14 @@ public partial class VoiceChatManager : Node
             if (IsInstanceValid(output))
             {
                 output.VolumeDb = db;
+            }
+        }
+
+        foreach (AudioStreamPlayer output in _radioPlayers.Values)
+        {
+            if (IsInstanceValid(output))
+            {
+                output.VolumeDb = db - 3.0f;
             }
         }
     }

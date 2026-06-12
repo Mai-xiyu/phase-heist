@@ -361,6 +361,7 @@ public partial class PlayerController : CharacterBody3D
 
         ScanGroup("objectives", origin, ref best, ref bestDistance);
         ScanGroup("vehicles", origin, ref best, ref bestDistance);
+        ScanGroup("hostages", origin, ref best, ref bestDistance);
 
         CurrentInteractable = best;
     }
