@@ -1,0 +1,65 @@
+[gd_scene load_steps=6 format=3 uid="uid://b3blwa7cs3sjy"]
+
+[ext_resource type="Script" path="res://Scripts/Game.cs" id="1_game"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="2_player"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_main"]
+sky_top_color = Color(0.18, 0.30, 0.50, 1)
+sky_horizon_color = Color(0.78, 0.70, 0.58, 1)
+ground_bottom_color = Color(0.10, 0.10, 0.11, 1)
+ground_horizon_color = Color(0.60, 0.54, 0.48, 1)
+sun_angle_max = 30.0
+sun_curve = 0.12
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("SkyMat_main")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_main")
+ambient_light_source = 3
+ambient_light_energy = 0.45
+tonemap_mode = 3
+tonemap_exposure = 1.05
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_radius = 2.0
+ssao_intensity = 2.4
+ssao_power = 1.6
+glow_enabled = true
+glow_intensity = 0.45
+glow_strength = 0.95
+glow_bloom = 0.05
+glow_hdr_threshold = 1.1
+fog_enabled = true
+fog_light_color = Color(0.62, 0.66, 0.72, 1)
+fog_light_energy = 0.9
+fog_density = 0.0035
+fog_sky_affect = 0.25
+adjustment_enabled = true
+adjustment_contrast = 1.06
+adjustment_saturation = 1.08
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_game")
+PlayerScene = ExtResource("2_player")
+PlayersRootPath = NodePath("Players")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.81915, -0.40958, 0.40167, 0, 0.700001, 0.714142, -0.573577, -0.584988, 0.573408, 0, 25, 0)
+light_color = Color(1, 0.93, 0.82, 1)
+light_energy = 1.45
+shadow_enabled = true
+shadow_blur = 1.6
+directional_shadow_max_distance = 120.0
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.766044, 0.321394, -0.556671, 0, 0.866025, 0.5, 0.642788, 0.383022, -0.663414, 0, 20, 0)
+light_color = Color(0.55, 0.62, 0.78, 1)
+light_energy = 0.25
+shadow_enabled = false
+
+[node name="Players" type="Node3D" parent="."]

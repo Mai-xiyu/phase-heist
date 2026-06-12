@@ -1,0 +1,28 @@
+config_version=5
+
+[application]
+
+config/name="Bank Heist"
+run/main_scene="res://Scenes/MainMenu.tscn"
+config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+
+[audio]
+
+driver/enable_input=true
+
+[autoload]
+
+AppState="*res://Scripts/Core/AppState.cs"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[dotnet]
+
+project/assembly_name="GodotSample"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
